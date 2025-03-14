@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using backend.Data;
 using backend.Models;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize] 
 public class PasswordsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -20,32 +23,44 @@ public class PasswordsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Password>>> GetPasswords()
     {
-        return await _context.Passwords.ToListAsync();
-    }
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    // GET: api/passwords/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Password>> GetPassword(int id)
-    {
-        var password = await _context.Passwords.FindAsync(id);
-
-        if (password == null)
-        {
-            return NotFound();
+        if(string.IsNullOrEmpty(userIdClaim)) {
+            return Unauthorized("User not authorized");
         }
 
-        return password;
+        int userId = int.Parse(userIdClaim);
+
+        return await _context.Passwords
+            .Where(p => p.UserId == userId)
+            .ToListAsync();
     }
 
     // POST: api/passwords
     [HttpPost]
     public async Task<ActionResult<Password>> PostPassword(Password password)
     {
-        password.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if(string.IsNullOrEmpty(userIdClaim)) {
+            return Unauthorized("User not authorized");
+        }
+
+        int userId = int.Parse(userIdClaim);
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found" });
+        }
+
+        password.UserId = userId;
+        password.User = user;
+        password.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword); // todo change
 
         _context.Passwords.Add(password);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetPassword), new { id = password.Id }, password);
+        return Ok(new { message = "Password created sucessfully" });
     }
 }
