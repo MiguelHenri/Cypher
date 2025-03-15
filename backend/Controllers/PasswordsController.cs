@@ -23,16 +23,14 @@ public class PasswordsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Password>>> GetPasswords()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if(string.IsNullOrEmpty(userIdClaim)) {
-            return Unauthorized("User not authorized");
+        var user = await GetAuthenticatedUser();
+        if (user == null)
+        {
+            return Unauthorized(new { message = "User not authorized" });
         }
 
-        int userId = int.Parse(userIdClaim);
-
         return await _context.Passwords
-            .Where(p => p.UserId == userId)
+            .Where(p => p.UserId == user.Id)
             .ToListAsync();
     }
 
@@ -40,21 +38,13 @@ public class PasswordsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Password>> PostPassword(Password password)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if(string.IsNullOrEmpty(userIdClaim)) {
-            return Unauthorized("User not authorized");
-        }
-
-        int userId = int.Parse(userIdClaim);
-
-        var user = await _context.Users.FindAsync(userId);
+        var user = await GetAuthenticatedUser();
         if (user == null)
         {
-            return NotFound(new { message = "User not found" });
+            return Unauthorized(new { message = "User not authorized" });
         }
 
-        password.UserId = userId;
+        password.UserId = user.Id;
         password.User = user;
         password.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword); // todo change
 
@@ -62,5 +52,80 @@ public class PasswordsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Password created sucessfully" });
+    }
+
+    // UPDATE: api/passwords/{id}
+    [HttpPut("{id}")]
+    public async Task<ActionResult<Password>> UpdatePassword(int id, Password password)
+    {
+        var user = await GetAuthenticatedUser();
+        if (user == null)
+        {
+            return Unauthorized(new { message = "User not authorized" });
+        }
+
+        var passwordFound = await GetPasswordFromIds(id, user.Id);
+        if (passwordFound == null)
+        {
+            return NotFound(new { message = "Password not found" });
+        }
+
+        if (!string.IsNullOrEmpty(password.ServiceName)) 
+        {
+            passwordFound.ServiceName = password.ServiceName;
+        }
+        if (!string.IsNullOrEmpty(password.HashedPassword))
+        {
+            passwordFound.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword);
+        }
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Password updated sucessfully" });
+    }
+
+    // DELETE: api/passwords/{id}
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePassword(int id)
+    {
+        var user = await GetAuthenticatedUser();
+        if (user == null)
+        {
+            return Unauthorized(new { message = "User not authorized" });
+        }
+
+        var passwordFound = await GetPasswordFromIds(id, user.Id);
+        if (passwordFound == null)
+        {
+            return NotFound(new { message = "Password not found" });
+        }
+
+        _context.Passwords.Remove(passwordFound);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Password deleted successfully" });
+    }
+
+    private async Task<User?> GetAuthenticatedUser()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            return null;
+        }
+
+        if (!int.TryParse(userIdClaim, out int userId))
+        {
+            return null;
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+        return user;
+    }
+
+    private async Task<Password?> GetPasswordFromIds(int pwdId, int userId)
+    {
+        var password = await _context.Passwords.FirstOrDefaultAsync(p => p.Id == pwdId && p.UserId == userId);
+        return password;
     }
 }
