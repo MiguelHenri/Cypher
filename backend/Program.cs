@@ -13,6 +13,7 @@ var connectionString = Env.GetString("DB_CONN");
 var jwtKey = Env.GetString("JWT_KEY");
 var jwtIssuer = Env.GetString("JWT_ISSUER");
 var jwtAudience = Env.GetString("JWT_AUDIENCE");
+var frontendUrl = Env.GetString("FRONTEND_URL");
 
 builder.Services.AddControllers();
 
@@ -21,6 +22,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql
 builder.Configuration["Jwt:Key"] = Env.GetString("JWT_KEY");
 builder.Configuration["Jwt:Issuer"] = Env.GetString("JWT_ISSUER");
 builder.Configuration["Jwt:Audience"] = Env.GetString("JWT_AUDIENCE");
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins(frontendUrl)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -39,9 +51,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddScoped<IUserService, UserService>();
+
 var app = builder.Build();
 
 app.UseRouting();
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

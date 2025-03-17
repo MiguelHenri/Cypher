@@ -1,13 +1,32 @@
 import { useState } from "react";
 import { Button, Paper, TextField, Typography } from "@mui/material";
+import axios from "axios";
+import { useNavigate } from "react-router";
+import { useAuth } from "../contexts/useAuth";
 
 export default function Home() {
+    const navigate = useNavigate();
+    const { saveLogin } = useAuth();
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log(email, password);
+        axios.post('/api/users/login', {
+            email: email,
+            hashedPassword: password,
+        }).then((res) => {
+            if (res.status === 200) {
+                saveLogin(res.data.userName, res.data.token);
+                console.log(res.data.userName, res.data.token);
+                navigate('/passwords');
+            }
+            else {
+                console.log(res);
+            }
+        }).catch((err) => {
+            console.error(err);
+        })
     };
 
     return (

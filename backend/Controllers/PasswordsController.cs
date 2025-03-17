@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 using backend.Data;
 using backend.Models;
 
@@ -13,17 +10,19 @@ using backend.Models;
 public class PasswordsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IUserService _userService;
 
-    public PasswordsController(ApplicationDbContext context)
+    public PasswordsController(ApplicationDbContext context, IUserService userService)
     {
         _context = context;
+        _userService = userService;
     }
 
     // GET: api/passwords
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Password>>> GetPasswords()
     {
-        var user = await GetAuthenticatedUser();
+        var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
         {
             return Unauthorized(new { message = "User not authorized" });
@@ -38,7 +37,7 @@ public class PasswordsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Password>> PostPassword(Password password)
     {
-        var user = await GetAuthenticatedUser();
+        var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
         {
             return Unauthorized(new { message = "User not authorized" });
@@ -58,7 +57,7 @@ public class PasswordsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<Password>> UpdatePassword(int id, Password password)
     {
-        var user = await GetAuthenticatedUser();
+        var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
         {
             return Unauthorized(new { message = "User not authorized" });
@@ -87,7 +86,7 @@ public class PasswordsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePassword(int id)
     {
-        var user = await GetAuthenticatedUser();
+        var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
         {
             return Unauthorized(new { message = "User not authorized" });
@@ -103,24 +102,6 @@ public class PasswordsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Password deleted successfully" });
-    }
-
-    private async Task<User?> GetAuthenticatedUser()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim))
-        {
-            return null;
-        }
-
-        if (!int.TryParse(userIdClaim, out int userId))
-        {
-            return null;
-        }
-
-        var user = await _context.Users.FindAsync(userId);
-        return user;
     }
 
     private async Task<Password?> GetPasswordFromIds(int pwdId, int userId)

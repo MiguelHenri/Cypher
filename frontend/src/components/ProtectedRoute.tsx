@@ -10,7 +10,7 @@ type ProtectedRouteProps = {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const { token, clearAuth } = useAuth();
-    const [isValid, setIsValid] = useState<boolean | null>(null);
+    const [isValid, setIsValid] = useState<boolean | null>(null)
 
     useEffect(() => {
         if (!token) return;
@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             }
         })
             .then(res => {
-                if (res.status === 204) {
+                if (res.status === 200) {
                     setIsValid(true);
                 } else {
                     setIsValid(false);

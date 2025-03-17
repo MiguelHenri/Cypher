@@ -7,9 +7,7 @@ using System.Text;
 using BCrypt.Net;
 using backend.Data;
 using backend.Models;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -17,11 +15,27 @@ public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IUserService _userService;
 
-    public UsersController(ApplicationDbContext context, IConfiguration configuration)
+    public UsersController(ApplicationDbContext context, IConfiguration configuration, IUserService userService)
     {
         _context = context;
         _configuration = configuration;
+        _userService = userService;
+    }
+
+    // GET: api/users/auth
+    [HttpGet("auth")]
+    [Authorize]
+    public async Task<ActionResult<User>> GetUserAuth()
+    {
+        var user = await _userService.GetAuthenticatedUser(User);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "User not authorized" });
+        }
+
+        return Ok(new { message = "User authorized" });
     }
 
     // POST: api/users/register
@@ -45,15 +59,15 @@ public class UsersController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(User user)
     {
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Name == user.Name);
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
         if (existingUser == null)
-            return Unauthorized(new { message = "User or password is invalid" });
+            return Unauthorized(new { message = "Email or password is invalid" });
 
         if (!BCrypt.Net.BCrypt.Verify(user.HashedPassword, existingUser.HashedPassword))
-            return Unauthorized(new { message = "User or password is invalid" });
+            return Unauthorized(new { message = "Email or password is invalid" });
 
         var token = GenerateJwtToken(existingUser);
-        return Ok(new { token });
+        return Ok(new { token = token, userName = existingUser.Name });
     }
 
     private string GenerateJwtToken(User user)
