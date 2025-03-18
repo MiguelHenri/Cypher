@@ -7,6 +7,7 @@ using System.Text;
 using BCrypt.Net;
 using backend.Data;
 using backend.Models;
+using backend.DTOs;
 using Microsoft.AspNetCore.Authorization;
 
 [Route("api/[controller]")]
@@ -40,14 +41,19 @@ public class UsersController : ControllerBase
 
     // POST: api/users/register
     [HttpPost("register")]
-    public async Task<ActionResult<User>> Register(User user)
+    public async Task<ActionResult<User>> Register(UserCreateDto dto)
     {
-        if (_context.Users.Any(u => u.Name == user.Name))
+        if (_context.Users.Any(u => u.Name == dto.Name || u.Email == dto.Email))
         {
             return BadRequest(new { message = "User already exists" });
         }
 
-        user.HashedPassword = BCrypt.Net.BCrypt.HashPassword(user.HashedPassword);
+        var user = new User
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password)
+        };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -57,13 +63,13 @@ public class UsersController : ControllerBase
 
     // POST: api/users/login
     [HttpPost("login")]
-    public async Task<IActionResult> Login(User user)
+    public async Task<IActionResult> Login(UserLoginDto dto)
     {
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (existingUser == null)
             return Unauthorized(new { message = "Email or password is invalid" });
 
-        if (!BCrypt.Net.BCrypt.Verify(user.HashedPassword, existingUser.HashedPassword))
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, existingUser.HashedPassword))
             return Unauthorized(new { message = "Email or password is invalid" });
 
         var token = GenerateJwtToken(existingUser);

@@ -52,3 +52,7 @@ npm run dev
 ```
 
 - This will execute the development environment.
+
+## API
+
+Check the [API docs](/backend/README.md).

@@ -15,7 +15,7 @@ export default function Signup() {
         axios.post('/api/users/register', {
             email: email,
             name: userName,
-            hashedPassword: password,
+            password: password,
         }).then((res) => {
             if (res.status === 200) {
                 navigate('/');

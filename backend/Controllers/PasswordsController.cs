@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using backend.Data;
 using backend.Models;
+using backend.DTOs;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -35,7 +36,7 @@ public class PasswordsController : ControllerBase
 
     // POST: api/passwords
     [HttpPost]
-    public async Task<ActionResult<Password>> PostPassword(Password password)
+    public async Task<ActionResult<Password>> PostPassword(PasswordCreateDto dto)
     {
         var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
@@ -43,9 +44,12 @@ public class PasswordsController : ControllerBase
             return Unauthorized(new { message = "User not authorized" });
         }
 
-        password.UserId = user.Id;
-        password.User = user;
-        password.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword); // todo change
+        var password = new Password {
+            UserId = user.Id,
+            User = user,
+            ServiceName = dto.ServiceName,
+            HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+        };
 
         _context.Passwords.Add(password);
         await _context.SaveChangesAsync();
@@ -55,7 +59,7 @@ public class PasswordsController : ControllerBase
 
     // PUT: api/passwords/{id}
     [HttpPut("{id}")]
-    public async Task<ActionResult<Password>> UpdatePassword(int id, Password password)
+    public async Task<ActionResult<Password>> UpdatePassword(int id, PasswordCreateDto dto)
     {
         var user = await _userService.GetAuthenticatedUser(User);
         if (user == null)
@@ -69,13 +73,13 @@ public class PasswordsController : ControllerBase
             return NotFound(new { message = "Password not found" });
         }
 
-        if (!string.IsNullOrEmpty(password.ServiceName)) 
+        if (!string.IsNullOrEmpty(dto.ServiceName)) 
         {
-            passwordFound.ServiceName = password.ServiceName;
+            passwordFound.ServiceName = dto.ServiceName;
         }
-        if (!string.IsNullOrEmpty(password.HashedPassword))
+        if (!string.IsNullOrEmpty(dto.Password))
         {
-            passwordFound.HashedPassword = BCrypt.Net.BCrypt.HashPassword(password.HashedPassword);
+            passwordFound.HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
         }
         await _context.SaveChangesAsync();
 

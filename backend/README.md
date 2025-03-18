@@ -19,7 +19,7 @@ Registers a new user.
 **Request Body:**
 ```json
 {
-  "username": "string",
+  "name": "string",
   "email": "string",
   "hashedPassword": "string"
 }
@@ -39,7 +39,7 @@ Logs in a user.
 ```json
 {
   "email": "string",
-  "hashedPassword": "string"
+  "password": "string"
 }
 ```
 
@@ -66,7 +66,7 @@ Creates a new password entry.
 ```json
 {
   "serviceName": "string",
-  "hashedPassword": "string"
+  "password": "string"
 }
 
 ```
@@ -82,7 +82,7 @@ Updates an existing password entry.
 ```json
 {
   "serviceName": "string",
-  "hashedPassword": "string"
+  "password": "string"
 }
 ```
 

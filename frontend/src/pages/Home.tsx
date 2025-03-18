@@ -14,7 +14,7 @@ export default function Home() {
         e.preventDefault();
         axios.post('/api/users/login', {
             email: email,
-            hashedPassword: password,
+            password: password,
         }).then((res) => {
             if (res.status === 200) {
                 saveLogin(res.data.userName, res.data.token);
