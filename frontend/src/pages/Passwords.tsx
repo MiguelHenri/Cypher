@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Box,
+  Paper,
   Button,
   IconButton,
   List,
@@ -8,25 +8,48 @@ import {
   ListItemText,
   Typography,
   Stack,
+  CircularProgress,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import axios from "axios";
+import { useAuth } from "../contexts/useAuth";
 
 type PasswordItem = {
     id: number;
     serviceName: string;
+    hashedPassword: string;
+    createdAt: Date;
 };
 
 export default function Passwords() {
+    const { token } = useAuth();
+    const [loading, setLoading] = useState<boolean>(true);
     const [passwords, setPasswords] = useState<PasswordItem[]>([]);
 
     useEffect(() => {
-        setPasswords([
-            { id: 1, serviceName: "Google" },
-            { id: 2, serviceName: "Facebook" },
-            { id: 3, serviceName: "Twitter" },
-        ]);
+        axios.get('/api/passwords', {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            }
+        })
+            .then((res) => {
+                const processed: PasswordItem[] = res.data
+                    .map(
+                        (m: any, index: number) => ({
+                            id: index,
+                            serviceName: m.serviceName,
+                            hashedPassword: m.hashedPassword,
+                            createdAt: new Date(m.createdAt),
+                        })
+                    );
+                setPasswords(processed);
+            })
+            .catch((err) => {
+                console.error(err);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     const handleDelete = (id: number) => {
@@ -42,8 +65,8 @@ export default function Passwords() {
     };
 
     return (
-        <Box p={4}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Paper elevation={3} sx={{ padding: 4 }}>
+            <Stack direction="row" justifyContent="center" alignItems="center" gap={3} mb={3}>
                 <Typography variant="h5"> My Passwords </Typography>
                 <Button
                     variant="contained"
@@ -54,7 +77,12 @@ export default function Passwords() {
                 </Button>
             </Stack>
             <List>
-                {passwords.map((item) => (
+                {loading ?
+                <CircularProgress sx={{ alignSelf: "center"}}/>
+                : !passwords.length ?
+                <Typography align="center"> No passwords found. </Typography>
+                :
+                passwords.map((item) => (
                 <ListItem
                     key={item.id}
                     secondaryAction={
@@ -72,6 +100,6 @@ export default function Passwords() {
                 </ListItem>
                 ))}
             </List>
-        </Box>
+        </Paper>
     );
 }
