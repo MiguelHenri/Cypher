@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Passwords from './pages/Passwords'
 import Layout from './components/Layout'
 import axios from 'axios'
+import Signup from './pages/Signup'
 
 if (import.meta.env.VITE_BACKEND_URL)
   axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
@@ -16,6 +17,7 @@ function App() {
       <Routes>
         <Route path='/' element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path='signup' element={<Signup />} />
           <Route path='passwords' element={
             <ProtectedRoute>
               <Passwords />
