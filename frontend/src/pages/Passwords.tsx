@@ -15,6 +15,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import axios from "axios";
 import { useAuth } from "../contexts/useAuth";
+import PasswordDialog, { DialogType } from "../components/PasswordDialog";
 
 type PasswordItem = {
     id: number;
@@ -27,6 +28,7 @@ export default function Passwords() {
     const { token } = useAuth();
     const [loading, setLoading] = useState<boolean>(true);
     const [passwords, setPasswords] = useState<PasswordItem[]>([]);
+    const [openDialog, setOpenDialog] = useState<DialogType>(null);
 
     useEffect(() => {
         axios.get('/api/passwords', {
@@ -37,8 +39,8 @@ export default function Passwords() {
             .then((res) => {
                 const processed: PasswordItem[] = res.data
                     .map(
-                        (m: any, index: number) => ({
-                            id: index,
+                        (m: any) => ({
+                            id: m.id,
                             serviceName: m.serviceName,
                             hashedPassword: m.hashedPassword,
                             createdAt: new Date(m.createdAt),
@@ -52,26 +54,40 @@ export default function Passwords() {
             .finally(() => setLoading(false));
     }, []);
 
-    const handleDelete = (id: number) => {
-        console.log('delete', id);
+    const handleDelete = () => {
+        console.log('delete');
     };
 
-    const handleEdit = (id: number) => {
-        console.log('edit', id);
+    const handleEdit = () => {
+        console.log('edit');
     };
 
     const handleAdd = () => {
         console.log('add');
     };
 
+    const getSubmitFunction = (type: DialogType) => {
+        switch (type) {
+            case "create":
+                return handleAdd
+            case "delete":
+                return handleDelete
+            case "edit":
+                return handleEdit
+            default:
+                return () => {}
+        }
+    }
+
     return (
+        <>
         <Paper elevation={3} sx={{ padding: 4 }}>
             <Stack direction="row" justifyContent="center" alignItems="center" gap={3} mb={3}>
                 <Typography variant="h5"> My Passwords </Typography>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={handleAdd}
+                    onClick={() => setOpenDialog("create")}
                 >
                     New Password
                 </Button>
@@ -87,10 +103,10 @@ export default function Passwords() {
                     key={item.id}
                     secondaryAction={
                     <Stack direction="row" spacing={1}>
-                        <IconButton edge="end" onClick={() => handleEdit(item.id)}>
+                        <IconButton edge="end" onClick={() => setOpenDialog("edit")}>
                         <EditIcon />
                         </IconButton>
-                        <IconButton edge="end" onClick={() => handleDelete(item.id)}>
+                        <IconButton edge="end" onClick={() => setOpenDialog("delete")}>
                         <DeleteIcon />
                         </IconButton>
                     </Stack>
@@ -101,5 +117,12 @@ export default function Passwords() {
                 ))}
             </List>
         </Paper>
+        <PasswordDialog 
+            open={openDialog !== null}
+            onClose={() => setOpenDialog(null)}
+            onSubmit={getSubmitFunction(openDialog)}
+            type={openDialog}
+        />
+        </>
     );
 }
