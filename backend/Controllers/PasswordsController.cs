@@ -53,7 +53,7 @@ public class PasswordsController : ControllerBase
         return Ok(new { message = "Password created sucessfully" });
     }
 
-    // UPDATE: api/passwords/{id}
+    // PUT: api/passwords/{id}
     [HttpPut("{id}")]
     public async Task<ActionResult<Password>> UpdatePassword(int id, Password password)
     {
